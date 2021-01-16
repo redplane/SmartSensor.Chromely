@@ -8,7 +8,6 @@ namespace Chromely.Core
 {
     public interface IChromelySerializerUtil
     {
-        JsonSerializerOptions SerializerOptions { get; set; }
         string ObjectToJson(object value);
         string EnsureResponseDataIsJson(object value);
         IDictionary<string, object> JsonToArray(string json);
