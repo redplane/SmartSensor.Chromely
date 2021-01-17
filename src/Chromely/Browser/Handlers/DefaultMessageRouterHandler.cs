@@ -39,7 +39,7 @@ namespace Chromely.Browser
                 var id = requestData.id ?? string.Empty;
                 var path = requestData.url ?? string.Empty;
 
-                bool isRequestAsync = _routeProvider.IsActionRouteAsync(path);
+                bool isRequestAsync = _routeProvider.IsActionRouteAsync(requestData.method, path);
 
                 if (isRequestAsync)
                 {

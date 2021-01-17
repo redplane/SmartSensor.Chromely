@@ -67,7 +67,7 @@ namespace Chromely.Browser
             var uri = new Uri(request.Url);
             var path = uri.LocalPath;
 
-            var isRequestAsync = _routeProvider.IsActionRouteAsync(path);
+            var isRequestAsync = _routeProvider.IsActionRouteAsync(request.Method, path);
             if (isRequestAsync)
                 ProcessRequestAsync(path, request, callback);
             else

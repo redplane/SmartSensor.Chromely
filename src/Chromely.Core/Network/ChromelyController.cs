@@ -12,13 +12,20 @@ namespace Chromely.Core.Network
 {
     public abstract class ChromelyController
     {
+        #region Constructor
+
         protected ChromelyController()
         {
             ActionRouteDictionary = new Dictionary<string, RequestActionRoute>();
             CommandRouteDictionary = new Dictionary<string, CommandActionRoute>();
         }
 
+        #endregion
+
+        #region Properties
+
         private string _name;
+
         private string _description;
 
         public string Name
@@ -48,19 +55,24 @@ namespace Chromely.Core.Network
         }
 
         public Dictionary<string, RequestActionRoute> ActionRouteDictionary { get; }
+
         public Dictionary<string, CommandActionRoute> CommandRouteDictionary { get; }
 
-        protected void RegisterRequest(string path, Func<IChromelyRequest, IChromelyResponse> action, string description = null)
+        #endregion
+
+        #region Internal methods
+
+        protected void RegisterRequest(string method, string path, Func<IChromelyRequest, IChromelyResponse> action, string description = null)
         {
-            AddRoute(path, new RequestActionRoute(path, action, description));
+            AddRoute(method, path, new RequestActionRoute(path, action, description));
         }
 
-        protected void RegisterRequestAsync(string path, Func<IChromelyRequest, Task<IChromelyResponse>> action, string description = null)
+        protected void RegisterRequestAsync(string method, string path, Func<IChromelyRequest, Task<IChromelyResponse>> action, string description = null)
         {
-            AddRoute(path, new RequestActionRoute(path, action, description));
+            AddRoute(method, path, new RequestActionRoute(path, action, description));
         }
 
-        protected void RegisterCommand(string path, Action<IDictionary<string, string>> action, string description = null)
+        protected virtual void RegisterCommand(string path, Action<IDictionary<string, string>> action, string description = null)
         {
             if (string.IsNullOrWhiteSpace(path) || action == null)
             {
@@ -72,9 +84,9 @@ namespace Chromely.Core.Network
             CommandRouteDictionary[commandKey] = command;
         }
 
-        private void AddRoute(string path, RequestActionRoute route)
+        private void AddRoute(string method, string path, RequestActionRoute route)
         {
-            var actionKey = RouteKey.CreateRequestKey(path);
+            var actionKey = RouteKey.CreateRequestKey(method, path);
             ActionRouteDictionary[actionKey] = route;
         }
 
@@ -94,5 +106,7 @@ namespace Chromely.Core.Network
                 Logger.Instance.Log.LogError(exception, "ChromelyController:SetAttributeInfo");
             }
         }
+
+        #endregion
     }
 }

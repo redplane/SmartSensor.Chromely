@@ -134,9 +134,9 @@ namespace Chromely.Core.Defaults
             }
         }
 
-        public virtual RequestActionRoute GetActionRoute(string routeUrl)
+        public virtual RequestActionRoute GetActionRoute(string method, string routeUrl)
         {
-            var key = RouteKey.CreateRequestKey(routeUrl);
+            var key = RouteKey.CreateRequestKey(method, routeUrl);
             if (string.IsNullOrWhiteSpace(key))
             {
                 return null;
@@ -168,11 +168,11 @@ namespace Chromely.Core.Defaults
             return null;
         }
 
-        public virtual bool IsActionRouteAsync(string routeUrl)
+        public virtual bool IsActionRouteAsync(string method, string routeUrl)
         {
             try
             {
-                var route = GetActionRoute(routeUrl);
+                var route = GetActionRoute(method, routeUrl);
                 return route == null ? false : route.IsAsync;
             }
             catch {}
