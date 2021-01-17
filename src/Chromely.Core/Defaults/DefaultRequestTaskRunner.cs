@@ -21,28 +21,6 @@ namespace Chromely.Core.Defaults
             _chromelyInfo = chromelyInfo;
         }
 
-        public IChromelyResponse Run(string routeUrl, IDictionary<string, string> parameters, object postData)
-        {
-            if (string.IsNullOrWhiteSpace(routeUrl))
-            {
-                return GetBadRequestResponse(null);
-            }
-
-            if (routeUrl.ToLower().Equals("/info"))
-            {
-                return _chromelyInfo?.GetInfo(string.Empty);
-            }
-
-            var route = _routeProvider.GetActionRoute(routeUrl);
-
-            if (route == null)
-            {
-                throw new Exception($"Route for path = {routeUrl} is null or invalid.");
-            }
-
-            return ExecuteRoute(string.Empty, routeUrl, parameters, postData, string.Empty);
-        }
-
         public IChromelyResponse Run(IChromelyRequest request)
         {
             if (request.RouteUrl == null)
@@ -70,31 +48,10 @@ namespace Chromely.Core.Defaults
             var parameters = temp?.ToDictionary();
             var postData = request.PostData;
 
-            return ExecuteRoute(request.Id, request.RouteUrl, parameters, postData, request.RawJson);
+            return ExecuteRoute(request.Id, request.Method, request.RouteUrl, parameters, postData, request.RawJson);
         }
 
-        public IChromelyResponse Run(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
-        {
-            if (string.IsNullOrEmpty(routeUrl))
-            {
-                return GetBadRequestResponse(requestId);
-            }
-
-            if (routeUrl.ToLower().Equals("/info"))
-            {
-                return _chromelyInfo?.GetInfo(requestId);
-            }
-
-            var route = _routeProvider.GetActionRoute(routeUrl);
-            if (route == null)
-            {
-                throw new Exception($"Route for path = {routeUrl} is null or invalid.");
-            }
-
-            return ExecuteRoute(requestId, routeUrl, parameters, postData, requestData);
-        }
-
-        public async Task<IChromelyResponse> RunAsync(string routeUrl, IDictionary<string, string> parameters, object postData)
+        public async Task<IChromelyResponse> RunAsync(string routeUrl, string method, IDictionary<string, string> parameters, object postData)
         {
             if (string.IsNullOrWhiteSpace(routeUrl))
             {
@@ -113,7 +70,7 @@ namespace Chromely.Core.Defaults
                 throw new Exception($"Route for path = {routeUrl} is null or invalid.");
             }
 
-            return await ExecuteRouteAsync(string.Empty, routeUrl, parameters, postData, string.Empty);
+            return await ExecuteRouteAsync(string.Empty, method, routeUrl, parameters, postData, string.Empty);
         }
 
         public async Task<IChromelyResponse> RunAsync(IChromelyRequest request)
@@ -143,10 +100,10 @@ namespace Chromely.Core.Defaults
             var parameters = temp?.ToDictionary();
             var postData = request.PostData;
 
-            return await ExecuteRouteAsync(request.Id, request.RouteUrl, parameters, postData, request.RawJson);
+            return await ExecuteRouteAsync(request.Id, request.Method, request.RouteUrl, parameters, postData, request.RawJson);
         }
 
-        public async Task<IChromelyResponse> RunAsync(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
+        public async Task<IChromelyResponse> RunAsync(string requestId, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
         {
             if (string.IsNullOrEmpty(routeUrl))
             {
@@ -164,10 +121,10 @@ namespace Chromely.Core.Defaults
                 throw new Exception($"Route for path = {routeUrl} is null or invalid.");
             }
 
-            return await ExecuteRouteAsync(requestId, routeUrl, parameters, postData, requestData);
+            return await ExecuteRouteAsync(requestId, method, routeUrl, parameters, postData, requestData);
         }
 
-        private IChromelyResponse ExecuteRoute(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
+        private IChromelyResponse ExecuteRoute(string requestId, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
         {
             var route = _routeProvider.GetActionRoute(routeUrl);
 
@@ -176,7 +133,7 @@ namespace Chromely.Core.Defaults
                 return GetBadRequestResponse(requestId, $"Route for path = {routeUrl} is null or invalid.");
             }
 
-            var response = route.Invoke(requestId: requestId, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
+            var response = route.Invoke(requestId: requestId, method: method, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
             response.ReadyState = (int)ReadyState.ResponseIsReady;
             response.Status = (response.Status == 0) ? (int)HttpStatusCode.OK : response.Status;
             response.StatusText = (string.IsNullOrWhiteSpace(response.StatusText) && (response.Status == (int)HttpStatusCode.OK)) ? "OK" : response.StatusText;
@@ -184,7 +141,7 @@ namespace Chromely.Core.Defaults
             return response;
         }
 
-        private async Task<IChromelyResponse> ExecuteRouteAsync(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
+        private async Task<IChromelyResponse> ExecuteRouteAsync(string requestId, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData)
         {
             var route = _routeProvider.GetActionRoute(routeUrl);
 
@@ -196,11 +153,11 @@ namespace Chromely.Core.Defaults
             IChromelyResponse response;
             if (route.IsAsync)
             {
-                response = await route.InvokeAsync(requestId: requestId, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
+                response = await route.InvokeAsync(requestId: requestId, method: method, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
             }
             else
             {
-                response = route.Invoke(requestId: requestId, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
+                response = route.Invoke(requestId: requestId, method: method, routeUrl: routeUrl, parameters: parameters, postData: postData, rawJson: requestData);
             }
 
             response.ReadyState = (int)ReadyState.ResponseIsReady;

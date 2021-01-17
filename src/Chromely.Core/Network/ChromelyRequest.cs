@@ -67,6 +67,7 @@ namespace Chromely.Core.Network
         /// <param name="id">
         /// The id.
         /// </param>
+        /// <param name="method">Request method</param>
         /// <param name="routeUrl">
         /// The route path.
         /// </param>
@@ -79,9 +80,10 @@ namespace Chromely.Core.Network
         /// <param name="rawJson">
         /// The raw json.
         /// </param>
-        public ChromelyRequest(string id, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson)
+        public ChromelyRequest(string id, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson)
         {
             Id = id;
+            Method = method;
             RouteUrl = routeUrl;
             Parameters = parameters;
             PostData = postData;
@@ -92,6 +94,12 @@ namespace Chromely.Core.Network
         /// Gets or sets the id.
         /// </summary>
         public string Id { get; set; }
+
+        /// <summary>
+        /// Method of request.
+        /// </summary>
+        public string Method { get; set; }
+
         public string Name { get; set; }
 
         /// <summary>

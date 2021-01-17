@@ -8,11 +8,12 @@ namespace Chromely.Core.Network
 {
     public interface IChromelyRequestTaskRunner
     {
+        #region Methods
+
         IChromelyResponse Run(IChromelyRequest request);
-        IChromelyResponse Run(string path, IDictionary<string, string> parameters, object postData);
-        IChromelyResponse Run(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData);
+
         Task<IChromelyResponse> RunAsync(IChromelyRequest request);
-        Task<IChromelyResponse> RunAsync(string path, IDictionary<string, string> parameters, object postData);
-        Task<IChromelyResponse> RunAsync(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string requestData);
+
+        #endregion
     }
 }

@@ -14,6 +14,12 @@ namespace Chromely.Core.Network
         /// Gets or sets the id.
         /// </summary>
         string Id { get; set; }
+
+        /// <summary>
+        /// Request method.
+        /// </summary>
+        string Method { get; set; }
+
         string Name { get; set; }
 
         /// <summary>

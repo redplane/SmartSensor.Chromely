@@ -31,9 +31,9 @@ namespace Chromely.Core.Network
 
         public Func<IChromelyRequest, IChromelyResponse> Action { get; set; }
         public Func<IChromelyRequest, Task<IChromelyResponse>> ActionAsync { get; set; }
-        public IChromelyResponse Invoke(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson = null)
+        public IChromelyResponse Invoke(string requestId, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson = null)
         {
-            var request = new ChromelyRequest(requestId, routeUrl, parameters, postData, rawJson);
+            var request = new ChromelyRequest(requestId, method, routeUrl, parameters, postData, rawJson);
             return Action.Invoke(request);
         }
         public IChromelyResponse Invoke(IChromelyRequest request)
@@ -41,9 +41,9 @@ namespace Chromely.Core.Network
             return Action.Invoke(request);
         }
 
-        public Task<IChromelyResponse> InvokeAsync(string requestId, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson = null)
+        public Task<IChromelyResponse> InvokeAsync(string requestId, string method, string routeUrl, IDictionary<string, string> parameters, object postData, string rawJson = null)
         {
-            var request = new ChromelyRequest(requestId, routeUrl, parameters, postData, rawJson);
+            var request = new ChromelyRequest(requestId, method, routeUrl, parameters, postData, rawJson);
             return ActionAsync.Invoke(request);
         }
 
