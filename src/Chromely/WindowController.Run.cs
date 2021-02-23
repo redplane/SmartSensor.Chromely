@@ -57,7 +57,8 @@ namespace Chromely
 
             _config.ChromelyVersion = CefRuntime.ChromeVersion;
 
-            var tempFiles = CefBinariesLoader.Load(_config);
+            // Load chromium files.
+            var tempFiles = CefBinariesLoader.Load(_config, _downloadUrlBuilder);
 
             CefRuntime.EnableHighDpiSupport();
 

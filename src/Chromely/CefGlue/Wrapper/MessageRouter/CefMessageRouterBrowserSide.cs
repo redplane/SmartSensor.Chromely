@@ -510,11 +510,10 @@
 
         private void SendQuerySuccess(QueryInfo info, string response)
         {
-            CefFrame frame = info.Browser.GetFrame(info.FrameId);
-            SendQuerySuccess(info.Browser, frame, info.ContextId, info.RequestId, response);
+            SendQuerySuccess(info.Browser, info.FrameId,  info.ContextId, info.RequestId, response);
         }
 
-        private void SendQuerySuccess(CefBrowser browser, CefFrame frame, int contextId, int requestId, string response)
+        private void SendQuerySuccess(CefBrowser browser, long frameId, int contextId, int requestId, string response)
         {
             var message = CefProcessMessage.Create(_queryMessageName);
             var args = message.Arguments;
@@ -522,18 +521,17 @@
             args.SetInt(1, requestId);
             args.SetBool(2, true);  // Indicates a success result.
             args.SetString(3, response);
-            frame?.SendProcessMessage(CefProcessId.Renderer, message);
+            browser.GetFrame(frameId).SendProcessMessage(CefProcessId.Renderer, message);
             args.Dispose();
             message.Dispose();
         }
 
         private void SendQueryFailure(QueryInfo info, int errorCode, string errorMessage)
         {
-            CefFrame frame = info.Browser.GetFrame(info.FrameId);
-            SendQueryFailure(info.Browser, frame, info.ContextId, info.RequestId, errorCode, errorMessage);
+            SendQueryFailure(info.Browser, info.FrameId,  info.ContextId, info.RequestId, errorCode, errorMessage);
         }
 
-        private void SendQueryFailure(CefBrowser browser, CefFrame frame, int contextId, int requestId, int errorCode, string errorMessage)
+        private void SendQueryFailure(CefBrowser browser, long frameId, int contextId, int requestId, int errorCode, string errorMessage)
         {
             var message = CefProcessMessage.Create(_queryMessageName);
             var args = message.Arguments;
@@ -542,7 +540,7 @@
             args.SetBool(2, false);  // Indicates a failure result.
             args.SetInt(3, errorCode);
             args.SetString(4, errorMessage);
-            frame?.SendProcessMessage(CefProcessId.Renderer, message);
+            browser.GetFrame(frameId).SendProcessMessage(CefProcessId.Renderer, message);
             args.Dispose();
             message.Dispose();
         }
@@ -550,7 +548,7 @@
         // Cancel a query that has not been sent to a handler.
         private void CancelUnhandledQuery(CefBrowser browser, CefFrame frame, int contextId, int requestId)
         {
-            SendQueryFailure(browser, frame, contextId, requestId, CefMessageRouter.CanceledErrorCode, CefMessageRouter.CanceledErrorMessage);
+            SendQueryFailure(browser, frame.Identifier, contextId, requestId, CefMessageRouter.CanceledErrorCode, CefMessageRouter.CanceledErrorMessage);
         }
 
         // Cancel a query that has already been sent to a handler.

@@ -267,24 +267,24 @@ namespace Chromely.Browser
             BrowserHost?.GetNavigationEntries(visitor, currentOnly);
         }
 
-        /// <summary>
-        /// Set whether mouse cursor change is disabled.
-        /// </summary>
-        public void SetMouseCursorChangeDisabled(bool disabled)
-        {
-            BrowserHost?.SetMouseCursorChangeDisabled(disabled);
-        }
+        ///// <summary>
+        ///// Set whether mouse cursor change is disabled.
+        ///// </summary>
+        //public void SetMouseCursorChangeDisabled(bool disabled)
+        //{
+        //    BrowserHost?.SetMouseCursorChangeDisabled(disabled);
+        //}
 
-        /// <summary>
-        /// Returns true if mouse cursor change is disabled.
-        /// </summary>
-        public bool IsMouseCursorChangeDisabled
-        {
-            get
-            {
-                return BrowserHost == null ? false : BrowserHost.IsMouseCursorChangeDisabled;
-            }
-        }
+        ///// <summary>
+        ///// Returns true if mouse cursor change is disabled.
+        ///// </summary>
+        //public bool IsMouseCursorChangeDisabled
+        //{
+        //    get
+        //    {
+        //        return BrowserHost == null ? false : BrowserHost.IsMouseCursorChangeDisabled;
+        //    }
+        //}
 
         /// <summary>
         /// If a misspelled word is currently selected in an editable node calling

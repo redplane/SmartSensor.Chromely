@@ -1,9 +1,12 @@
 ﻿// Copyright © 2017-2020 Chromely Projects. All rights reserved.
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
 
+using System.Net.Http;
 using Chromely.Core.Host;
 using Chromely.Core.Infrastructure;
+using Chromely.Core.Providers;
 using Chromely.NativeHost;
+using Chromely.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -20,6 +23,9 @@ namespace Chromely
             base.ConfigureCoreServices(services);
 
             var platform = ChromelyRuntime.Platform;
+
+            var defaultDownloadUrlBuilder = new DefaultChromiumDownloadUrlBuilder(new HttpClient());
+            services.TryAddSingleton<IChromiumDownloadUrlBuilder>(defaultDownloadUrlBuilder);
 
             switch (platform)
             {

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Chromely.Core.Configuration;
 using Chromely.Core.Infrastructure;
 using Chromely.Core.Logging;
+using Chromely.Core.Providers;
 using ICSharpCode.SharpZipLib.BZip2;
 using ICSharpCode.SharpZipLib.Tar;
 using Microsoft.Extensions.Logging;
@@ -52,19 +53,24 @@ namespace Chromely.Loader
         /// Download CEF runtime files.
         /// </summary>
         /// <exception cref="Exception"></exception>
-        public static void Download(ChromelyPlatform platform)
+        public static void Download(IChromelyConfiguration chromelyConfiguration, IChromiumDownloadUrlBuilder downloadUrlBuilder)
         {
             Logger.Instance.Log.LogInformation("CefLoader: Installing CEF runtime from " + CefBuildsDownloadUrl);
 
-            var loader = new CefLoader(platform);
+            var loader = new CefLoader(chromelyConfiguration.Platform);
             try
             {
                 var watch = new Stopwatch();
                 watch.Start();
-                loader.GetDownloadUrl();
-                if (!loader.ParallelDownload())
+
+                // Get the download url.
+                var downloadUrl = downloadUrlBuilder.BuildDownloadUrlAsync(chromelyConfiguration)
+                    .Result;
+
+                //loader.GetDownloadUrl();
+                if (!loader.ParallelDownload(downloadUrl))
                 {
-                    loader.Download();
+                    loader.Download(downloadUrl);
                 }
                 Logger.Instance.Log.LogInformation($"CefLoader: Download took {watch.ElapsedMilliseconds}ms");
                 watch.Restart();
@@ -105,7 +111,6 @@ namespace Chromely.Loader
 
         private readonly ChromelyPlatform _platform;
         private readonly Architecture _architecture;
-        private readonly CefBuildNumbers _build;
 
         private readonly string _tempTarStream;
         private readonly string _tempBz2File;
@@ -114,7 +119,6 @@ namespace Chromely.Loader
 
         private string _archiveName;
         private string _folderName;
-        private string _downloadUrl;
         private long _downloadLength;
 
         private readonly int _numberOfParallelDownloads;
@@ -124,9 +128,7 @@ namespace Chromely.Loader
         {
             _platform = platform;
             _architecture = RuntimeInformation.ProcessArchitecture;
-            _build = ChromelyRuntime.GetExpectedCefBuild();
-            Logger.Instance.Log.LogInformation($"CefLoader: Load CEF for {_platform} {_architecture}, version {_build}");
-
+            
             _lastPercent = 0;
             _numberOfParallelDownloads = Environment.ProcessorCount;
 
@@ -233,26 +235,24 @@ namespace Chromely.Loader
             }
         }
 
-        private void GetDownloadUrl()
-        {
-            _archiveName = FindCefArchiveName(_platform, _architecture, _build);
-            _folderName = _archiveName
-                .Replace("%2B", "+")
-                .Replace(".tar.bz2", "");
-            _downloadUrl = CefDownloadUrl(_archiveName);
-            Logger.Instance.Log.LogInformation($"CefLoader: Found download URL {_downloadUrl}");
-        }
+        //private void GetDownloadUrl()
+        //{
+        //    _archiveName = FindCefArchiveName(_platform, _architecture, _build);
+        //    _folderName = _archiveName
+        //        .Replace("%2B", "+")
+        //        .Replace(".tar.bz2", "");
+        //}
 
         private class Range  
         {  
             public long Start { get; set; }  
             public long End { get; set; }  
         }  
-        private bool ParallelDownload()
+        private bool ParallelDownload(string downloadUrl)
         {
             try
             {
-                var webRequest = WebRequest.Create(_downloadUrl);
+                var webRequest = WebRequest.Create(downloadUrl);
                 webRequest.Method = "HEAD";
                 using (var webResponse = webRequest.GetResponse())
                 {
@@ -283,7 +283,7 @@ namespace Chromely.Loader
 
                 Parallel.ForEach(readRanges, new ParallelOptions() { MaxDegreeOfParallelism = _numberOfParallelDownloads }, readRange =>
                 {
-                    var httpWebRequest = WebRequest.Create(_downloadUrl) as HttpWebRequest;
+                    var httpWebRequest = WebRequest.Create(downloadUrl) as HttpWebRequest;
                     // ReSharper disable once PossibleNullReferenceException
                     httpWebRequest.Method = "GET";
                     httpWebRequest.Timeout = (int)TimeSpan.FromMinutes(DownloadTimeoutMinutes).TotalMilliseconds;
@@ -325,7 +325,7 @@ namespace Chromely.Loader
             return false;
         }
 
-        private void Download()
+        private void Download(string downloadUrl)
         {
             using (var client = new WebClient())
             {
@@ -337,7 +337,7 @@ namespace Chromely.Loader
                 Logger.Instance.Log.LogInformation($"CefLoader: Loading {_tempBz2File}");
                 client.DownloadProgressChanged += Client_DownloadProgressChanged;
 
-                client.DownloadFile(_downloadUrl, _tempBz2File);
+                client.DownloadFile(downloadUrl, _tempBz2File);
             }
         }
 

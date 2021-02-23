@@ -16,30 +16,6 @@ namespace Chromely.Core.Infrastructure
     /// </summary>
     public static class ChromelyRuntime
     {
-        /// <summary>The get expected chromium build number.</summary>
-        /// <returns>The <see cref="int" />.</returns>
-        public static CefBuildNumbers GetExpectedCefBuild()
-        {
-            try
-            {
-                var appExeLocation = AppDomain.CurrentDomain.BaseDirectory;
-                string dllName = Path.Combine(appExeLocation, "Chromely.dll");
-                var assembly = Assembly.LoadFrom(dllName);
-                var types = assembly.GetTypes();
-                var type = types.FirstOrDefault(t => t.Name == "CefRuntime");
-                var versionProperty = type?.GetProperty("CefVersion");
-                var cefVersion = versionProperty?.GetValue(null).ToString();
-                versionProperty = type?.GetProperty("ChromeVersion");
-                var chromiumVersion = versionProperty?.GetValue(null).ToString();
-                return new CefBuildNumbers(cefVersion, chromiumVersion);
-            }
-            catch (Exception ex)
-            {
-                Logger.Instance.Log.LogError("Could not get expected chromium build number: " + ex.Message);
-            }
-            return new CefBuildNumbers("","");
-        }
-
         /// <summary>
         /// Gets the runtime the application is running on.
         /// </summary>
