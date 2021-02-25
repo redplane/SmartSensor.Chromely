@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Chromely.Core.Configuration;
 using Chromely.Core.Infrastructure;
+using Chromely.Core.Models;
 using Chromely.Core.Providers;
 using Chromely.ViewModels;
 using Newtonsoft.Json;
@@ -38,7 +39,26 @@ namespace Chromely.Providers
 
 		#region Methods
 
-		public virtual async Task<string> BuildDownloadUrlAsync(IChromelyConfiguration configuration)
+		public virtual async Task<BuiltChromiumDownloadUrl> BuildDownloadUrlAsync(IChromelyConfiguration configuration)
+		{
+			var achieveFileName = await GetFileNameAsync(configuration);
+
+			var fullUrl = $"{_baseUrl}/{achieveFileName}";
+			var folderName = achieveFileName
+					.Replace("%2B", "+")
+					.Replace(".tar.bz2", ""); ;
+
+			var builtChromiumDownloadUrl = new BuiltChromiumDownloadUrl(fullUrl, folderName);
+			return builtChromiumDownloadUrl;
+		}
+
+		/// <summary>
+		/// Get file name which is able to be downloaded.
+		/// </summary>
+		/// <param name="configuration"></param>
+		/// <returns></returns>
+		/// <exception cref="Exception"></exception>
+		protected virtual Task<string> GetFileNameAsync(IChromelyConfiguration configuration)
 		{
 			// Get the current runtime architecture.
 			var runtimeArchitecture = GetRuntimeArchitecture();
@@ -72,12 +92,12 @@ namespace Chromely.Providers
 			var availableVersion = availableVersions.Versions
 				.FirstOrDefault(version =>
 					version.CefVersion.Equals(szCefVersion) && version.ChromiumVersion.Equals(szChromiumVersion)
-					                                        && version.Channel.Equals("stable"));
+															&& version.Channel.Equals("stable"));
 
 			if (availableVersion == null)
 				throw new Exception($"Cannot find any downloadable version. Expected CEF version: {szCefVersion} | Chromium version: {szChromiumVersion}");
 
-			return $"cef_binary_{availableVersion.CefVersion}_{szArchitecture}_minimal.tar.br2";
+			return Task.FromResult($"cef_binary_{availableVersion.CefVersion}_{szArchitecture}_minimal.tar.bz2");
 		}
 
 		#endregion

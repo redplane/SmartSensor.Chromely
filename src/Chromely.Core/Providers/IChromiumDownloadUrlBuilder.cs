@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Chromely.Core.Configuration;
+using Chromely.Core.Models;
 
 namespace Chromely.Core.Providers
 {
@@ -7,7 +8,7 @@ namespace Chromely.Core.Providers
 	{
 		#region Methods
 
-		Task<string> BuildDownloadUrlAsync(IChromelyConfiguration configuration);
+		Task<BuiltChromiumDownloadUrl> BuildDownloadUrlAsync(IChromelyConfiguration configuration);
 
 		#endregion
 	}
