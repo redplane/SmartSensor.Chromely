@@ -17,17 +17,31 @@ namespace Chromely.Browser
 {
     public class DefaultRequestSchemeHandler : CefResourceHandler
     {
-        protected readonly IChromelyRouteProvider _routeProvider;
+        #region Properties
+
         protected readonly IChromelyRequestSchemeProvider _requestSchemeProvider;
+
         protected readonly IChromelyRequestTaskRunner _requestTaskRunner;
+
+        protected readonly IChromelyRouteProvider _routeProvider;
+
         protected readonly IChromelySerializerUtil _serializerUtil;
 
         protected IChromelyResponse _chromelyResponse;
-        protected byte[] _responseBytes;
+
         protected bool _completed;
+
+        protected byte[] _responseBytes;
+
         protected int _totalBytesRead;
 
-        public DefaultRequestSchemeHandler(IChromelyRouteProvider routeProvider, IChromelyRequestSchemeProvider requestSchemeProvider, IChromelyRequestTaskRunner requestTaskRunner, IChromelySerializerUtil serializerUtil)
+        #endregion
+
+        #region Constructor
+
+        public DefaultRequestSchemeHandler(IChromelyRouteProvider routeProvider,
+            IChromelyRequestSchemeProvider requestSchemeProvider, IChromelyRequestTaskRunner requestTaskRunner,
+            IChromelySerializerUtil serializerUtil)
         {
             _routeProvider = routeProvider;
             _requestSchemeProvider = requestSchemeProvider;
@@ -35,137 +49,35 @@ namespace Chromely.Browser
             _serializerUtil = serializerUtil;
         }
 
+        #endregion
+
+        #region Methods
+
         [Obsolete]
         protected override bool ProcessRequest(CefRequest request, CefCallback callback)
         {
             var isSchemeRegistered = _requestSchemeProvider?.IsSchemeRegistered(request.Url);
-            if (isSchemeRegistered.HasValue && isSchemeRegistered.Value)
+            if (isSchemeRegistered == null || !isSchemeRegistered.Value)
             {
-                var uri = new Uri(request.Url);
-                var path = uri.LocalPath;
-
-                bool isRequestAsync = _routeProvider.IsActionRouteAsync(path);
-                if (isRequestAsync)
-                {
-                    ProcessRequestAsync(path);
-                }
-                else
-                {
-                    ProcessRequest(path);
-                }
-
-                return true;
+                Logger.Instance.Log.LogWarning($"Url {request.Url} is not of a registered custom scheme.");
+                callback.Dispose();
+                return false;
             }
 
-            Logger.Instance.Log.LogWarning($"Url {request.Url} is not of a registered custom scheme.");
-            callback.Dispose();
-            return false;
+            var uri = new Uri(request.Url);
+            var path = uri.LocalPath;
 
-            #region Process Request
+            var isRequestAsync = _routeProvider.IsActionRouteAsync(request.Method, path);
+            if (isRequestAsync)
+                ProcessRequestAsync(path, request, callback);
+            else
+                ProcessRequest(path, request, callback);
 
-            void ProcessRequest(string path)
-            {
-                Task.Run(() =>
-                {
-                    using (callback)
-                    {
-                        try
-                        {
-                            var response = new ChromelyResponse();
-                            if (string.IsNullOrEmpty(path))
-                            {
-                                response.ReadyState = (int)ReadyState.ResponseIsReady;
-                                response.Status = (int)HttpStatusCode.BadRequest;
-                                response.StatusText = "Bad Request";
-
-                                _chromelyResponse = response;
-                            }
-                            else
-                            {
-                                var parameters = request.Url.GetParameters();
-                                var postData = GetPostData(request);
-
-                                var jsonRequest = _serializerUtil.ObjectToJson(request);
-                                _chromelyResponse = _requestTaskRunner.Run(request.Identifier.ToString(), path, parameters, postData, jsonRequest);
-                                string jsonData = _serializerUtil.EnsureResponseDataIsJson(_chromelyResponse.Data);
-                                _responseBytes = Encoding.UTF8.GetBytes(jsonData);
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            Logger.Instance.Log.LogError(exception, exception.Message);
-
-                            _chromelyResponse =
-                                new ChromelyResponse
-                                {
-                                    Status = (int)HttpStatusCode.BadRequest,
-                                    Data = "An error occured."
-                                };
-                        }
-                        finally
-                        {
-                            callback.Continue();
-                        }
-                    }
-                });
-            }
-
-            #endregion
-
-            #region Process Request Async
-
-            void ProcessRequestAsync(string path)
-            {
-                Task.Run(async () =>
-                {
-                    using (callback)
-                    {
-                        try
-                        {
-                            var response = new ChromelyResponse();
-                            if (string.IsNullOrEmpty(path))
-                            {
-                                response.ReadyState = (int)ReadyState.ResponseIsReady;
-                                response.Status = (int)System.Net.HttpStatusCode.BadRequest;
-                                response.StatusText = "Bad Request";
-
-                                _chromelyResponse = response;
-                            }
-                            else
-                            {
-                                var parameters = request.Url.GetParameters();
-                                var postData = GetPostData(request);
-
-                                var jsonRequest = _serializerUtil.ObjectToJson(request);
-                                _chromelyResponse = await _requestTaskRunner.RunAsync(request.Identifier.ToString(), path, parameters, postData, jsonRequest);
-                                string jsonData = _serializerUtil.EnsureResponseDataIsJson(_chromelyResponse.Data);
-
-                                _responseBytes = Encoding.UTF8.GetBytes(jsonData);
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            Logger.Instance.Log.LogError(exception, exception.Message);
-
-                            _chromelyResponse =
-                                new ChromelyResponse
-                                {
-                                    Status = (int)HttpStatusCode.BadRequest,
-                                    Data = "An error occured."
-                                };
-                        }
-                        finally
-                        {
-                            callback.Continue();
-                        }
-                    }
-                });
-            }
-
-            #endregion
+            return true;
         }
 
-        protected override void GetResponseHeaders(CefResponse response, out long responseLength, out string redirectUrl)
+        protected override void GetResponseHeaders(CefResponse response, out long responseLength,
+            out string redirectUrl)
         {
             // unknown content-length
             // no-redirect
@@ -174,20 +86,22 @@ namespace Chromely.Browser
 
             try
             {
-                HttpStatusCode status = (_chromelyResponse != null) ? (HttpStatusCode)_chromelyResponse.Status : HttpStatusCode.BadRequest;
-                string errorStatus = (_chromelyResponse != null) ? _chromelyResponse.Data.ToString() : "Not Found";
+                var status = _chromelyResponse != null
+                    ? (HttpStatusCode)_chromelyResponse.Status
+                    : HttpStatusCode.BadRequest;
+                var errorStatus = _chromelyResponse != null ? _chromelyResponse.Data.ToString() : "Not Found";
 
                 var headers = response.GetHeaderMap();
                 headers.Add("Cache-Control", "private");
                 headers.Add("Access-Control-Allow-Origin", "*");
-                headers.Add("Access-Control-Allow-Methods", "GET,POST");
+                headers.Add("Access-Control-Allow-Methods", "*");
                 headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 headers.Add("Content-Type", "application/json; charset=utf-8");
                 response.SetHeaderMap(headers);
 
                 response.Status = (int)status;
                 response.MimeType = "application/json";
-                response.StatusText = (status == HttpStatusCode.OK) ? "OK" : errorStatus;
+                response.StatusText = status == HttpStatusCode.OK ? "OK" : errorStatus;
             }
             catch (Exception exception)
             {
@@ -198,7 +112,7 @@ namespace Chromely.Browser
         [Obsolete]
         protected override bool ReadResponse(Stream response, int bytesToRead, out int bytesRead, CefCallback callback)
         {
-            int currBytesRead = 0;
+            var currBytesRead = 0;
 
             try
             {
@@ -209,24 +123,19 @@ namespace Chromely.Browser
                     _responseBytes = null;
                     return false;
                 }
+
+                if (_responseBytes != null)
+                {
+                    currBytesRead = Math.Min(_responseBytes.Length - _totalBytesRead, bytesToRead);
+                    response.Write(_responseBytes, _totalBytesRead, currBytesRead);
+                    _totalBytesRead += currBytesRead;
+
+                    if (_totalBytesRead >= _responseBytes.Length) _completed = true;
+                }
                 else
                 {
-                    if (_responseBytes != null)
-                    {
-                        currBytesRead = Math.Min(_responseBytes.Length - _totalBytesRead, bytesToRead);
-                        response.Write(_responseBytes, _totalBytesRead, currBytesRead);
-                        _totalBytesRead += currBytesRead;
-
-                        if (_totalBytesRead >= _responseBytes.Length)
-                        {
-                            _completed = true;
-                        }
-                    }
-                    else
-                    {
-                        bytesRead = 0;
-                        _completed = true;
-                    }
+                    bytesRead = 0;
+                    _completed = true;
                 }
             }
             catch (Exception exception)
@@ -254,7 +163,8 @@ namespace Chromely.Browser
             return true;
         }
 
-        protected override bool Read(IntPtr dataOut, int bytesToRead, out int bytesRead, CefResourceReadCallback callback)
+        protected override bool Read(IntPtr dataOut, int bytesToRead, out int bytesRead,
+            CefResourceReadCallback callback)
         {
             bytesRead = -1;
             return false;
@@ -263,10 +173,7 @@ namespace Chromely.Browser
         private static string GetPostData(CefRequest request)
         {
             var postDataElements = request?.PostData?.GetElements();
-            if (postDataElements == null || (postDataElements.Length == 0))
-            {
-                return string.Empty;
-            }
+            if (postDataElements == null || postDataElements.Length == 0) return string.Empty;
 
             var dataElement = postDataElements[0];
 
@@ -282,5 +189,109 @@ namespace Chromely.Browser
 
             return string.Empty;
         }
+
+
+        protected void ProcessRequest(string path, CefRequest request, CefCallback callback)
+        {
+            Task.Run(() =>
+            {
+                using (callback)
+                {
+                    try
+                    {
+                        var response = new ChromelyResponse();
+                        if (string.IsNullOrEmpty(path))
+                        {
+                            response.ReadyState = (int)ReadyState.ResponseIsReady;
+                            response.Status = (int)HttpStatusCode.NotFound;
+                            response.StatusText = "Url not found";
+
+                            _chromelyResponse = response;
+                        }
+                        else
+                        {
+                            var parameters = request.Url.GetParameters();
+                            var postData = GetPostData(request);
+
+                            var jsonRequest = _serializerUtil.ObjectToJson(request);
+
+                            var chromelyRequest = new ChromelyRequest(request.Identifier.ToString(), request.Method,
+                                path, parameters, postData, jsonRequest);
+                            _chromelyResponse = _requestTaskRunner.Run(chromelyRequest);
+                            var jsonData = _serializerUtil.EnsureResponseDataIsJson(_chromelyResponse.Data);
+                            _responseBytes = Encoding.UTF8.GetBytes(jsonData);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Logger.Instance.Log.LogError(exception, exception.Message);
+
+                        _chromelyResponse =
+                            new ChromelyResponse
+                            {
+                                Status = (int)HttpStatusCode.BadRequest,
+                                Data = "An error occured."
+                            };
+                    }
+                    finally
+                    {
+                        callback.Continue();
+                    }
+                }
+            });
+        }
+
+        protected void ProcessRequestAsync(string path, CefRequest request, CefCallback callback)
+        {
+            Task.Run(async () =>
+            {
+                using (callback)
+                {
+                    try
+                    {
+                        var response = new ChromelyResponse();
+                        if (string.IsNullOrEmpty(path))
+                        {
+                            response.ReadyState = (int)ReadyState.ResponseIsReady;
+                            response.Status = (int)HttpStatusCode.NotFound;
+                            response.StatusText = "Url not found";
+
+                            _chromelyResponse = response;
+                        }
+                        else
+                        {
+                            var parameters = request.Url.GetParameters();
+                            var postData = GetPostData(request);
+
+                            var jsonRequest = _serializerUtil.ObjectToJson(request);
+
+                            var chromelyRequest = new ChromelyRequest(request.Identifier.ToString(), request.Method,
+                                path, parameters, postData, jsonRequest);
+                            _chromelyResponse = await _requestTaskRunner.RunAsync(chromelyRequest);
+                            var jsonData = _serializerUtil.EnsureResponseDataIsJson(_chromelyResponse.Data);
+
+                            _responseBytes = Encoding.UTF8.GetBytes(jsonData);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Logger.Instance.Log.LogError(exception, exception.Message);
+
+                        _chromelyResponse =
+                            new ChromelyResponse
+                            {
+                                Status = (int)HttpStatusCode.BadRequest,
+                                Data = "An error occured."
+                            };
+                    }
+                    finally
+                    {
+                        callback.Continue();
+                    }
+                }
+            });
+        }
+
+        #endregion
     }
 }

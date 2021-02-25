@@ -33,7 +33,8 @@ namespace Chromely.Core.Network
                 var asyncActionAttributeDelegate = CreateDelegate(controller, item) as Func<IChromelyRequest, Task<IChromelyResponse>>;
                 var attribute = item.GetCustomAttribute<RequestActionAttribute>();
 
-                var key = RouteKey.CreateRequestKey(attribute.RouteKey);
+                // TODO: Take care of method.
+                var key = RouteKey.CreateRequestKey(string.Empty, attribute.RouteKey);
 
                 // Sync
                 if (actionAttributeDelegate != null && attribute != null)

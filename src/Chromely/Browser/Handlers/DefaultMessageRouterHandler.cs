@@ -39,7 +39,7 @@ namespace Chromely.Browser
                 var id = requestData.id ?? string.Empty;
                 var path = requestData.url ?? string.Empty;
 
-                bool isRequestAsync = _routeProvider.IsActionRouteAsync(path);
+                bool isRequestAsync = _routeProvider.IsActionRouteAsync(requestData.method, path);
 
                 if (isRequestAsync)
                 {
@@ -48,7 +48,8 @@ namespace Chromely.Browser
                         var parameters = requestData.parameters;
                         var postData = requestData.postData;
 
-                        var response = await _requestTaskRunner.RunAsync(id, path, parameters, postData, request);
+                        var chromelyRequest = new ChromelyRequest(id, requestData.method, path, requestData.parameters, postData,  request);
+                        var response = await _requestTaskRunner.RunAsync(chromelyRequest);
                         var jsonResponse = _serializerUtil.ObjectToJson(response);
 
                         callback.Success(jsonResponse);
@@ -61,7 +62,8 @@ namespace Chromely.Browser
                         var parameters = requestData.parameters;
                         var postData = requestData.postData;
 
-                        var response = _requestTaskRunner.Run(id, path, parameters, postData, request);
+                        var chromelyRequest = new ChromelyRequest(id, requestData.method, parameters, postData);
+                        var response = _requestTaskRunner.Run(chromelyRequest);
                         var jsonResponse = _serializerUtil.ObjectToJson(response);
 
                         callback.Success(jsonResponse);

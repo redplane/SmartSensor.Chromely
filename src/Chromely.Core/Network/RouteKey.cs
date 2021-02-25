@@ -5,11 +5,16 @@ namespace Chromely.Core.Network
 {
     public static class RouteKey
     {
-        public static string CreateRequestKey(string url)
+        #region Methods
+
+        public static string CreateRequestKey(string method, string url)
         {
             url = url?.Trim().TrimStart('/');
-            var routeKey = $"action_{url}".Replace("/", "_").Replace("\\", "_");
-            return routeKey.ToLower();
+            var key = string.IsNullOrWhiteSpace(method)
+                ? $"action_{url}".Replace("/", "_").Replace("\\", "_") 
+                : $"action_{method}_{url}".Replace("/", "_").Replace("\\", "_");
+
+            return key.ToLower();
         }
 
         public static string CreateCommandKey(string url)
@@ -18,5 +23,7 @@ namespace Chromely.Core.Network
             var routeKey = $"commmand_{url}".Replace("/", "_").Replace("\\", "_");
             return routeKey.ToLower();
         }
+
+        #endregion
     }
 }
