@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Chromely.Core.Configuration;
@@ -19,6 +20,7 @@ using Chromely.Core.Models;
 using Chromely.Core.Providers;
 using ICSharpCode.SharpZipLib.BZip2;
 using ICSharpCode.SharpZipLib.Tar;
+using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
 using Xilium.CefGlue;
 // ReSharper disable MemberCanBePrivate.Global
@@ -241,38 +243,33 @@ namespace Chromely.Loader
 
 		private void Download(string downloadUrl)
 		{
-			using (var client = new WebClient())
-			{
-				if (File.Exists(_tempBz2File))
-				{
-					File.Delete(_tempBz2File);
-				}
+			using var client = new WebClient();
+			if (File.Exists(_tempBz2File))
+				File.Delete(_tempBz2File);
 
-				Logger.Instance.Log.LogInformation($"CefLoader: Loading {_tempBz2File}");
-				client.DownloadProgressChanged += Client_DownloadProgressChanged;
-
-				client.DownloadFile(downloadUrl, _tempBz2File);
-			}
+			Logger.Instance.Log.LogInformation($"CefLoader: Loading {_tempBz2File}");
+			client.DownloadFile(downloadUrl, _tempBz2File);
 		}
 
 		private void DecompressArchive()
 		{
 			Logger.Instance.Log.LogInformation("CefLoader: Decompressing BZ2 archive");
-			using (var tarStream = new FileStream(_tempTarStream, FileMode.Create, FileAccess.ReadWrite))
+			using var tarStream = new FileStream(_tempTarStream, FileMode.Create, FileAccess.ReadWrite);
+			using (var inStream = new FileStream(_tempBz2File, FileMode.Open, FileAccess.Read, FileShare.None))
 			{
-				using (var inStream = new FileStream(_tempBz2File, FileMode.Open, FileAccess.Read, FileShare.None))
-				{
-					BZip2.Decompress(inStream, tarStream, false, DecompressProgressChanged);
-				}
-
-				Logger.Instance.Log.LogInformation("CefLoader: Decompressing TAR archive");
-				tarStream.Seek(0, SeekOrigin.Begin);
-				var tar = TarArchive.CreateInputTarArchive(tarStream);
-				tar.ProgressMessageEvent += (archive, entry, message) => Logger.Instance.Log.LogInformation("CefLoader: Extracting " + entry.Name);
-
-				Directory.CreateDirectory(_tempDirectory);
-				tar.ExtractContents(_tempDirectory);
+				BZip2.Decompress(inStream, tarStream, false);
 			}
+
+			Logger.Instance.Log.LogInformation("CefLoader: Decompressing TAR archive");
+			tarStream.Seek(0, SeekOrigin.Begin);
+			var tar = TarArchive.CreateInputTarArchive(tarStream, Encoding.UTF8);
+			tar.ProgressMessageEvent += (archive, entry, message) =>
+			{
+				Logger.Instance.Log.LogInformation("CefLoader: Extracting " + entry.Name);
+			};
+				
+			Directory.CreateDirectory(_tempDirectory);
+			tar.ExtractContents(_tempDirectory);
 		}
 
 		private void CopyFilesToAppDirectory(string folderName)
@@ -307,36 +304,6 @@ namespace Chromely.Loader
 			// Copy Resource files
 			var resourcesFolder = Path.Combine(cefFrameworkFolder, "Resources");
 			CopyDirectory(resourcesFolder, appDirectory);
-		}
-
-		private void DecompressProgressChanged(int percent)
-		{
-			if (percent < 10)
-			{
-				_lastPercent = 0;
-			}
-			if ((percent % 10 != 0) || percent == _lastPercent)
-			{
-				return;
-			}
-			_lastPercent = percent;
-			Logger.Instance.Log.LogInformation($"CefLoader: Decompress progress = {percent}%");
-		}
-
-		private void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
-		{
-			var percent = (int)(e.BytesReceived * 100.0 / e.TotalBytesToReceive);
-			if (percent < 10)
-			{
-				_lastPercent = 0;
-			}
-			if ((percent % 10 != 0) || percent == _lastPercent)
-			{
-				return;
-			}
-
-			_lastPercent = percent;
-			Logger.Instance.Log.LogInformation($"CefLoader: Download progress = {percent}%");
 		}
 
 		private static void CopyDirectory(string sourceDirName, string destDirName)

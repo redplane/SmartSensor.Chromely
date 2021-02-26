@@ -17,7 +17,7 @@ using Xilium.CefGlue.Interop;
 
 namespace Chromely.Providers
 {
-	public class DefaultChromiumDownloadUrlBuilder : IChromiumDownloadUrlBuilder
+	public class SpotifyCdnDownloadUrlBuilder : IChromiumDownloadUrlBuilder
 	{
 		#region Properties
 
@@ -29,7 +29,7 @@ namespace Chromely.Providers
 
 		#region Constructor
 
-		public DefaultChromiumDownloadUrlBuilder(HttpClient httpClient)
+		public SpotifyCdnDownloadUrlBuilder(HttpClient httpClient)
 		{
 			_httpClient = httpClient;
 			_baseUrl = "https://cef-builds.spotifycdn.com";

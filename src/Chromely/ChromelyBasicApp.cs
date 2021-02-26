@@ -24,7 +24,7 @@ namespace Chromely
 
             var platform = ChromelyRuntime.Platform;
 
-            var defaultDownloadUrlBuilder = new DefaultChromiumDownloadUrlBuilder(new HttpClient());
+            var defaultDownloadUrlBuilder = new SpotifyCdnDownloadUrlBuilder(new HttpClient());
             services.TryAddSingleton<IChromiumDownloadUrlBuilder>(defaultDownloadUrlBuilder);
 
             switch (platform)
